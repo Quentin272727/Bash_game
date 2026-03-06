@@ -7,8 +7,12 @@ body {
 .bandeau {
     background-color: rgb(136, 136, 136);
     text-align: center;
-    color: rgb(255, 0, 0);
+    color: rgb(136, 8, 8);
 }
 .bandeau h1 {
     margin: 0;
 }
+
+
+$ git config --global user.name "John Doe"
+$ git config --global user.email johndoe@example.com
