@@ -7,8 +7,29 @@
     <title>Jeux BASH linux</title>
 </head>
 <body>
-    <div class="bandeau">
-        <h1>Jeux bash</h1>
+    <div class="bandeau"> <h1>Pierre Papier Ciseaux</h1> </div>
+
+    <div class="buttons">
+        <button onclick = "play('rock')">🗿 Rock</button>
+        <button onclick = "play('paper')">📄 Paper</button>
+        <button onclick = "play('scissors')">✂️ Scissors</button>
     </div>
+
+    <div class = "result">
+        <p id="result"></p>
+    </div>
+
+    <script>
+        async function play(playerChoice) {
+        const response = await fetch ('play.sh', {
+            method : 'POST',
+            body : playerChoice
+        }); 
+        const data = await response.text();
+
+        const msg = data.result === 'tie' ? "It's a tie!" : data.result === 'win' ? 'You win!' : 'You lose!';
+        document.getElementById('result').textContent = `You chose ${playerChoice}, computer chose ${data.computerChoice}. ${msg}`;
+        }
+       </script>
 </body>
 </html>
