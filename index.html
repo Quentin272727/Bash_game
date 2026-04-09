@@ -10,26 +10,57 @@
     <div class="bandeau"> <h1>Pierre Papier Ciseaux</h1> </div>
 
     <div class="buttons">
-        <button onclick = "play('rock')">🗿 Rock</button>
-        <button onclick = "play('paper')">📄 Paper</button>
-        <button onclick = "play('scissors')">✂️ Scissors</button>
+        <button onclick = "play('🗿')">🗿</button>
+        <button onclick = "play('📄')">📄</button>
+        <button onclick = "play('✂️')">✂️</button>
+    </div>
+
+    <div class="rules">
+        <p>Règles du jeu :<br>
+        - 🗿 bat ✂️<br>
+        - ✂️ bat 📄<br>
+        - 📄 bat 🗿</p>
     </div>
 
     <div class = "result">
         <p id="result"></p>
     </div>
+    
+    <div class="fight">
+        <div id="fight" style="display: flex; align-items: center; justify-content: center; gap: 1.5rem; font-size: 3rem; min-height: 5rem;">
+            <span id="player-icon" style="opacity: 0.2;">🗿</span>
+            <span style="font-size: 1.2rem; font-weight: 500; color: #888;">VS</span>
+            <span id="computer-icon" style="opacity: 0.2;">❓</span>
+        </div>
+    </div>
+<p id="result"></p>
 
-    <script>
-        async function play(playerChoice) {
-        const response = await fetch ('play.sh', {
-            method : 'POST',
-            body : playerChoice
-        }); 
-        const data = await response.text();
+    <div class="footer">
+        <p>contribution :</p>
+        <p>Jean--Daudé Louka</p>
+        <p>Guilhem Evann</p>
+        <p>Mateus Quentin</p>
+        <p>Cabezas Luigi</p>
+    </div>
+<script>
+    async function play(playerChoice) {
+        const response = await fetch('play.sh', {
+            method: 'POST',
+            body: playerChoice
+        });
+        const text = await response.text();
+        const data = JSON.parse(text);
 
-        const msg = data.result === 'tie' ? "It's a tie!" : data.result === 'win' ? 'You win!' : 'You lose!';
-        document.getElementById('result').textContent = `You chose ${playerChoice}, computer chose ${data.computerChoice}. ${msg}`;
-        }
-       </script>
+        // Update the VS display
+        document.getElementById('player-icon').textContent = playerChoice;
+        document.getElementById('player-icon').style.opacity = '1';
+        document.getElementById('computer-icon').textContent = data.computerChoice;
+        document.getElementById('computer-icon').style.opacity = '1';
+
+        // Result message
+        const msg = data.result === 'tie' ? "Égalité !" : data.result === 'win' ? '✔️ Vous gagnez !' : '❌ Vous perdez !';
+        document.getElementById('result').textContent = msg;
+    }
+</script>
 </body>
 </html>
