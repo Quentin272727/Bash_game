@@ -35,6 +35,25 @@ body {
     font-size: 36px;
 }
 
+.fight {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    font-size: 3rem;
+    min-height: 5rem;
+}
+
+span#player-icon, span#computer-icon {
+    opacity: 0.8;
+}
+
+span#versus {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #888;
+}
+
 .result {
     text-align: center;
     margin-top: 50px;
