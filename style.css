@@ -1,0 +1,14 @@
+body {
+    background-color: rgb(48, 48, 48);
+    font-family: Arial;
+    margin: 0;
+    padding: 0;
+}
+.bandeau {
+    background-color: rgb(136, 136, 136);
+    text-align: center;
+    color: rgb(136, 8, 8);
+}
+.bandeau h1 {
+    margin: 0;
+}
