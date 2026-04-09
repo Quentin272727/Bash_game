@@ -28,8 +28,8 @@ public class Server {
             String line = in.readLine();
             System.out.println("Requête reçue : " + line);
 
-            // Chargement du fichier HTML
-            File file = new File("Src/template/test.html");
+            // Chargement du fichier HTMLFile file = new File("Src" + File.separator + "template" + File.separator + "index.html");
+            File file = new File("Src" + File.separator + "template" + File.separator + "index.html");
             String html = new String(java.nio.file.Files.readAllBytes(file.toPath()));
 
             // Réponse HTTP
