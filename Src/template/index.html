@@ -11,13 +11,28 @@
     <div class="bandeau"> <h1>Pierre Papier Ciseaux</h1> </div>
 
     <div class="buttons">
-        <button onclick = "play('rock')">🗿 Rock</button>
-        <button onclick = "play('paper')">📄 Paper</button>
-        <button onclick = "play('scissors')">✂️ Scissors</button>
+        <button onclick = "play('🗿')">🗿</button>
+        <button onclick = "play('📄')">📄</button>
+        <button onclick = "play('✂️')">✂️</button>
+    </div>
+
+    <div class="rules">
+        <p>Règles du jeu :<br>
+        - 🗿 bat ✂️<br>
+        - ✂️ bat 📄<br>
+        - 📄 bat 🗿</p>
     </div>
 
     <div class = "result">
         <p id="result"></p>
+    </div>
+    
+    <div class="fight">
+        <div id="fight">
+            <span id="player-icon">🗿</span>
+            <span id="versus">VS</span>
+            <span id="computer-icon">❓</span>
+        </div>
     </div>
 
     <script>
