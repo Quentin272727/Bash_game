@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/style.css">
+
     <title>Jeux BASH linux</title>
 </head>
 <body>
@@ -20,16 +21,24 @@
     </div>
 
     <script>
-        async function play(playerChoice) {
-        const response = await fetch ('play.sh', {
-            method : 'POST',
-            body : playerChoice
-        }); 
-        const data = await response.text();
+async function play(playerChoice) {
+const response = await fetch('/play', {
+    method: 'POST',
+    body: playerChoice
+});
+const data = await response.json();
 
-        const msg = data.result === 'tie' ? "It's a tie!" : data.result === 'win' ? 'You win!' : 'You lose!';
-        document.getElementById('result').textContent = `You chose ${playerChoice}, computer chose ${data.computerChoice}. ${msg}`;
-        }
+
+    const msg = data.result === 'tie'
+        ? "It's a tie!"
+        : data.result === 'win'
+        ? 'You win!'
+        : 'You lose!';
+
+    document.getElementById('result').textContent =
+        `You chose ${playerChoice}, computer chose ${data.computerChoice}. ${msg}`;
+}
+
        </script>
 </body>
 </html>
