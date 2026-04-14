@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Lire le choix envoyé par le POST (fetch)
+# Read the choice sent by the POST (fetch)
 read playerChoice
 
-# Normaliser le choix du joueur
+# Normalize player choice
 case "$playerChoice" in
     rock|Rock|ROCK|r|R|🗿) player="rock" ;;
     paper|Paper|PAPER|p|P|📄) player="paper" ;;
@@ -11,11 +11,11 @@ case "$playerChoice" in
     *) player="invalid" ;;
 esac
 
-# Choix aléatoire de l'ordinateur
+# Random computer choice
 options=("rock" "paper" "scissors")
 computer=${options[$RANDOM % 3]}
 
-# Déterminer le résultat
+# Determine result
 if [[ "$player" == "invalid" ]]; then
     result="invalid"
 elif [[ "$player" == "$computer" ]]; then
@@ -28,5 +28,5 @@ else
     result="lose"
 fi
 
-# Retour JSON
+# Return JSON
 echo "{\"result\":\"$result\", \"computerChoice\":\"$computer\"}"

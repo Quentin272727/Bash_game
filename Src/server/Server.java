@@ -2,16 +2,21 @@ package server;
 
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Server {
 
+    private static final ExecutorService threadPool = Executors.newFixedThreadPool(10);
+
     public static void main(String[] args) {
         try (ServerSocket serverSocket = new ServerSocket(8080)) {
-            System.out.println("Serveur lancé sur http://localhost:8080");
+            System.out.println("Server started on http://localhost:8080");
 
             while (true) {
                 Socket client = serverSocket.accept();
-                handleClient(client);
+                threadPool.submit(() -> handleClient(client));
             }
 
         } catch (IOException e) {
@@ -19,25 +24,31 @@ public class Server {
         }
     }
 
-    // Détection Windows / Linux pour exécuter Play.sh correctement
     private static ProcessBuilder getProcessBuilder() {
         boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
 
+        File script = new File(System.getProperty("user.dir"), "Script_Bash/Play.sh");
+
+        System.out.println("Working dir : " + System.getProperty("user.dir"));
+        System.out.println("Script path : " + script.getAbsolutePath());
+        System.out.println("Script exists: " + script.exists());
+
         if (isWindows) {
-            // Windows → utiliser Git Bash
-            return new ProcessBuilder("bash", "Script_Bash/Play.sh");
+            return new ProcessBuilder("bash", script.getAbsolutePath());
         } else {
-            // Linux → exécuter directement
-            return new ProcessBuilder("./Script_Bash/Play.sh");
+            script.setExecutable(true);
+            return new ProcessBuilder(script.getAbsolutePath());
         }
     }
 
     private static void handleClient(Socket client) {
         try {
-            BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-            PrintWriter out = new PrintWriter(client.getOutputStream());
+            // Explicit UTF-8 so emoji bytes are never mangled
+            BufferedReader in = new BufferedReader(
+                new InputStreamReader(client.getInputStream(), StandardCharsets.UTF_8));
+            PrintWriter out = new PrintWriter(
+                new OutputStreamWriter(client.getOutputStream(), StandardCharsets.UTF_8));
 
-            // Lire la requête HTTP
             String request = in.readLine();
             System.out.println("Request: " + request);
 
@@ -46,57 +57,67 @@ public class Server {
                 return;
             }
 
-            // Extraire le chemin demandé
             String path = request.split(" ")[1];
 
-            // --- ROUTE /play : exécuter Play.sh ---
+            // --- ROUTE /play : run Play.sh ---
             if (path.equals("/play")) {
 
-                // Lire les headers jusqu'à la ligne vide
+                // Read Content-Length from headers to read the body correctly
+                int contentLength = 0;
                 String line;
-                while (!(line = in.readLine()).isEmpty()) {}
-
-                // Lire le body (choix du joueur)
-                StringBuilder body = new StringBuilder();
-                while (in.ready()) {
-                    body.append((char) in.read());
+                while ((line = in.readLine()) != null && !line.isEmpty()) {
+                    if (line.toLowerCase().startsWith("content-length:")) {
+                        contentLength = Integer.parseInt(line.split(":")[1].trim());
+                    }
                 }
-                String playerChoice = body.toString().trim();
+
+                // Read exactly contentLength chars (avoids in.ready() race)
+                String playerChoice = "";
+                if (contentLength > 0) {
+                    char[] buf = new char[contentLength];
+                    in.read(buf, 0, contentLength);
+                    playerChoice = new String(buf).trim();
+                }
                 System.out.println("Player choice = " + playerChoice);
 
-                // Exécuter Play.sh
                 ProcessBuilder pb = getProcessBuilder();
                 pb.redirectErrorStream(true);
                 Process process = pb.start();
 
-                // Envoyer le choix au script Bash
+                // Write player choice to bash stdin with UTF-8 (emoji support)
                 try (OutputStream os = process.getOutputStream()) {
-                    os.write(playerChoice.getBytes());
+                    os.write(playerChoice.getBytes(StandardCharsets.UTF_8));
                     os.flush();
                 }
 
-                // Lire la sortie JSON du script
-                BufferedReader scriptOut = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                // Read output BEFORE waitFor() to avoid pipe deadlock
+                BufferedReader scriptOut = new BufferedReader(
+                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8));
                 String json = scriptOut.readLine();
+                process.waitFor();
 
-                // Réponse HTTP JSON
-                out.println("HTTP/1.1 200 OK");
-                out.println("Content-Type: application/json");
-                out.println("Content-Length: " + json.length());
-                out.println();
-                out.println(json);
+                if (json == null) {
+                    json = "{\"result\":\"error\", \"computerChoice\":\"unknown\"}";
+                }
+
+                byte[] jsonBytes = json.getBytes(StandardCharsets.UTF_8);
+
+                out.print("HTTP/1.1 200 OK\r\n");
+                out.print("Content-Type: application/json; charset=UTF-8\r\n");
+                out.print("Content-Length: " + jsonBytes.length + "\r\n");
+                out.print("\r\n");
                 out.flush();
+                client.getOutputStream().write(jsonBytes);
+                client.getOutputStream().flush();
 
                 client.close();
                 return;
             }
 
-            // Par défaut → index.html
             if (path.equals("/")) {
                 path = "/index.html";
             }
 
-            // Dossiers où chercher les fichiers statiques
             File[] searchPaths = {
                 new File("Src/template" + path),
                 new File("Src" + path),
@@ -104,40 +125,34 @@ public class Server {
             };
 
             File file = null;
-
             for (File f : searchPaths) {
-                if (f.exists()) {
+                if (f.exists() && f.isFile()) {
                     file = f;
                     break;
                 }
             }
 
-            // Si aucun fichier trouvé → 404
             if (file == null) {
-                out.println("HTTP/1.1 404 Not Found");
-                out.println("Content-Type: text/plain");
-                out.println();
-                out.println("404 - File not found");
+                out.print("HTTP/1.1 404 Not Found\r\n");
+                out.print("Content-Type: text/plain\r\n");
+                out.print("\r\n");
+                out.print("404 - File not found");
                 out.flush();
                 client.close();
                 return;
             }
 
-            // Déterminer le type MIME
             String contentType = "text/plain";
             if (path.endsWith(".html")) contentType = "text/html; charset=UTF-8";
-            if (path.endsWith(".css")) contentType = "text/css";
-            if (path.endsWith(".js")) contentType = "application/javascript";
+            if (path.endsWith(".css"))  contentType = "text/css";
+            if (path.endsWith(".js"))   contentType = "application/javascript";
 
-            // Lire le fichier
             byte[] content = java.nio.file.Files.readAllBytes(file.toPath());
 
-            // Réponse HTTP
-            out.println("HTTP/1.1 200 OK");
-            out.println("Content-Type: " + contentType);
-            out.println("Content-Length: " + content.length);
-            out.println();
-
+            out.print("HTTP/1.1 200 OK\r\n");
+            out.print("Content-Type: " + contentType + "\r\n");
+            out.print("Content-Length: " + content.length + "\r\n");
+            out.print("\r\n");
             out.flush();
 
             client.getOutputStream().write(content);
@@ -145,7 +160,7 @@ public class Server {
 
             client.close();
 
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }

@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 
-# Se placer à la racine du projet (dossier du script)
+# Move to project root (parent of Script_Bash/)
 cd "$(dirname "$0")/.." || exit 1
 
-# Compiler la classe Server (et ses dépendances) si nécessaire
-javac -d . server/Server.java Src/main.java
+# Make Play.sh executable (needed on Linux)
+chmod +x Script_Bash/Play.sh
+
+# Compile — classpath must include Src/ so the 'server' package resolves
+javac -cp Src Src/server/Server.java Src/main.java
 
 if [ $? -ne 0 ]; then
-  echo "Échec de la compilation. Vérifie les erreurs ci-dessus."
+  echo "Compilation failed. Check errors above."
   exit 1
 fi
 
-echo "Lancement du serveur Java..."
-java main
+echo "Starting Java server..."
+# Run from project root; classpath points to Src/ where .class files landed
+java -cp Src main
