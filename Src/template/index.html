@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/style.css">
+    <title>Jeux BASH linux</title>
+</head>
+<body>
+    <div class="bandeau"> <h1>Pierre Papier Ciseaux</h1> </div>
+
+    <div class="buttons">
+        <button onclick="play('🗿')">🗿</button>
+        <button onclick="play('📄')">📄</button>
+        <button onclick="play('✂️')">✂️</button>
+    </div>
+
+    <div class="rules">
+        <p>Règles du jeu :<br>
+        - 🗿 bat ✂️<br>
+        - ✂️ bat 📄<br>
+        - 📄 bat 🗿</p>
+    </div>
+
+    <div class="fight">
+        <div id="fight">
+            <span id="player-icon">❓</span>
+            <span id="versus">VS</span>
+            <span id="computer-icon">❓</span>
+        </div>
+    </div>
+
+    <div class="result">
+        <p id="result"></p>
+    </div>
+
+    <script>
+        // Map the computer's word choice back to an emoji for display
+        const choiceEmoji = { rock: '🗿', paper: '📄', scissors: '✂️' };
+
+        async function play(playerChoice) {
+            // Show player icon immediately
+            document.getElementById('player-icon').textContent = playerChoice;
+            document.getElementById('computer-icon').textContent = '⏳';
+            document.getElementById('result').textContent = '';
+
+            let response;
+            try {
+                response = await fetch('/play', {
+                    method: 'POST',
+                    // Explicit Content-Type so the server reads Content-Length correctly
+                    headers: { 'Content-Type': 'text/plain; charset=UTF-8' },
+                    body: playerChoice
+                });
+
+                if (!response.ok) {
+                    throw new Error('Server returned ' + response.status);
+                }
+            } catch (e) {
+                document.getElementById('result').textContent = 'Error: could not reach the server.';
+                document.getElementById('computer-icon').textContent = '❓';
+                return;
+            }
+
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                document.getElementById('result').textContent = 'Error: invalid server response.';
+                document.getElementById('computer-icon').textContent = '❓';
+                return;
+            }
+
+            // Update the VS display with the computer's choice
+            const cpuEmoji = choiceEmoji[data.computerChoice] ?? '❓';
+            document.getElementById('computer-icon').textContent = cpuEmoji;
+
+            // Build result message
+            let msg;
+            if (data.result === 'tie')   msg = "It's a tie! 🤝";
+            else if (data.result === 'win')  msg = 'You win! 🎉';
+            else if (data.result === 'lose') msg = 'You lose! 💀';
+            else                              msg = 'Invalid choice.';
+
+            document.getElementById('result').textContent =
+                `You: ${playerChoice}  —  CPU: ${cpuEmoji}  →  ${msg}`;
+        }
+    </script>
+</body>
+</html>
