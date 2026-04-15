@@ -52,7 +52,7 @@ Bash_game/
 ### 1. Clone or extract the project
 
 ```bash
-unzip Bash_game_final.zip
+unzip Bash_game.zip
 cd Bash_game
 ```
 
