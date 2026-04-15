@@ -121,3 +121,8 @@ Browser  →  POST /play  →  Java Server  →  Play.sh (Bash)  →  JSON respo
 ## License
 
 This project was created for educational purposes.
+
+
+for run code :
+javac Src/server/Server.java Src/main.java
+java -cp Src main
