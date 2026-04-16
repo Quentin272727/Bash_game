@@ -33,26 +33,28 @@ public class Server {
         System.out.println("Script path : " + script.getAbsolutePath());
         System.out.println("Script exists: " + script.exists());
 
+        ProcessBuilder pb;
         if (isWindows) {
-            return new ProcessBuilder("bash", script.getAbsolutePath());
+            pb = new ProcessBuilder("bash", "Script_Bash/Play.sh");
+            pb.directory(new File(System.getProperty("user.dir")));
         } else {
             script.setExecutable(true);
-            return new ProcessBuilder(script.getAbsolutePath());
+            pb = new ProcessBuilder(script.getAbsolutePath());
         }
+        return pb;
     }
 
     private static void handleClient(Socket client) {
         try {
-            // Explicit UTF-8 so emoji bytes are never mangled
-            BufferedReader in = new BufferedReader(
-                new InputStreamReader(client.getInputStream(), StandardCharsets.UTF_8));
+            InputStream rawIn = client.getInputStream();
+            BufferedInputStream in = new BufferedInputStream(rawIn);
             PrintWriter out = new PrintWriter(
-                new OutputStreamWriter(client.getOutputStream(), StandardCharsets.UTF_8));
+                new OutputStreamWriter(client.getOutputStream(), StandardCharsets.UTF_8), true);
 
-            String request = in.readLine();
+            String request = readHttpRequestLine(in);
             System.out.println("Request: " + request);
 
-            if (request == null) {
+            if (request == null || request.isEmpty()) {
                 client.close();
                 return;
             }
@@ -62,22 +64,24 @@ public class Server {
             // --- ROUTE /play : run Play.sh ---
             if (path.equals("/play")) {
 
-                // Read Content-Length from headers to read the body correctly
                 int contentLength = 0;
                 String line;
-                while ((line = in.readLine()) != null && !line.isEmpty()) {
+                while ((line = readHttpRequestLine(in)) != null && !line.isEmpty()) {
                     if (line.toLowerCase().startsWith("content-length:")) {
-                        contentLength = Integer.parseInt(line.split(":")[1].trim());
+                        contentLength = Integer.parseInt(line.split(":", 2)[1].trim());
                     }
                 }
 
-                // Read exactly contentLength chars (avoids in.ready() race)
-                String playerChoice = "";
+                byte[] bodyBytes = new byte[contentLength];
                 if (contentLength > 0) {
-                    char[] buf = new char[contentLength];
-                    in.read(buf, 0, contentLength);
-                    playerChoice = new String(buf).trim();
+                    int read = 0;
+                    while (read < contentLength) {
+                        int n = in.read(bodyBytes, read, contentLength - read);
+                        if (n < 0) break;
+                        read += n;
+                    }
                 }
+                String playerChoice = new String(bodyBytes, StandardCharsets.UTF_8).trim();
                 System.out.println("Player choice = " + playerChoice);
 
                 ProcessBuilder pb = getProcessBuilder();
@@ -163,5 +167,30 @@ public class Server {
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    private static String readHttpRequestLine(BufferedInputStream in) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        int previous = -1;
+        int current;
+        while ((current = in.read()) != -1) {
+            if (previous == '\r' && current == '\n') {
+                break;
+            }
+            if (previous != -1) {
+                buffer.write(previous);
+            }
+            previous = current;
+        }
+
+        if (current == -1 && buffer.size() == 0) {
+            return null;
+        }
+
+        if (previous != -1 && previous != '\r') {
+            buffer.write(previous);
+        }
+
+        return buffer.toString(StandardCharsets.UTF_8.name());
     }
 }
